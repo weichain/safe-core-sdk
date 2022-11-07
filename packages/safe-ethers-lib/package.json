@@ -53,5 +53,8 @@
     "@weichain/safe-core-sdk-types": "^1.6.1",
     "@weichain/safe-core-sdk-utils": "^1.4.1",
     "ethers": "^5.7.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

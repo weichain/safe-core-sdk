@@ -45,5 +45,8 @@
     "@weichain/safe-deployments": "1.16.0",
     "web3-core": "^1.8.0",
     "web3-utils": "^1.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

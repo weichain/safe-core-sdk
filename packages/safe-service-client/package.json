@@ -78,5 +78,8 @@
     "@ethersproject/abstract-signer": "^5.7.0",
     "@weichain/safe-core-sdk-types": "^1.6.1",
     "node-fetch": "^2.6.6"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

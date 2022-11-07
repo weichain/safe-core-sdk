@@ -82,5 +82,8 @@
     "@weichain/safe-core-sdk-types": "^1.6.1",
     "@weichain/safe-deployments": "1.16.0",
     "axios": "^0.27.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
