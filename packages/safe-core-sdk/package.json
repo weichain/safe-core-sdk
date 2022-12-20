@@ -89,7 +89,7 @@
   },
   "dependencies": {
     "@ethersproject/solidity": "^5.7.0",
-    "@weichain/safe-core-sdk-types": "^1.6.1",
+    "@weichain/safe-core-sdk-types": "^1.6.2",
     "@weichain/safe-deployments": "1.17.0",
     "ethereumjs-util": "^7.1.5",
     "semver": "^7.3.7",
