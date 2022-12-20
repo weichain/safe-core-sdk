@@ -3129,10 +3129,10 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@weichain/safe-deployments@1.16.0":
-  version "1.16.0"
-  resolved "https://registry.yarnpkg.com/@weichain/safe-deployments/-/safe-deployments-1.16.0.tgz#9fa65f2854cb5786d238e3ecd9b0c06cc7fa7261"
-  integrity sha512-HvuUJK01C1TF0lUTnpWoj7mm+L3+iczG6fnvwkGFgRCTjlINKXIXfaGXLbTzQRXVQeDsPyuKZeZWEgue0JYFSw==
+"@weichain/safe-deployments@1.17.0":
+  version "1.17.0"
+  resolved "https://registry.yarnpkg.com/@weichain/safe-deployments/-/safe-deployments-1.17.0.tgz#76991b8097161cb1b78dcdfd9781dc79733d6081"
+  integrity sha512-xwXNKcSJizmi8ApbBoaRsLUcpw/01rbBzLtxXmxrPfQyr2r4oEQFLALk2CVwNwZRwpx5Prderfs6qfawBLgQ6Q==
   dependencies:
     semver "^7.3.7"
 
