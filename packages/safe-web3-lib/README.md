@@ -1,6 +1,6 @@
 # Safe Web3 Lib
 
-[![NPM Version](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-web3-lib.svg)](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-web3-lib)
+[![NPM Version](https://badge.fury.io/js/%40safe-global%2Fsafe-web3-lib.svg)](https://badge.fury.io/js/%40safe-global%2Fsafe-web3-lib)
 [![GitHub Release](https://img.shields.io/github/release/safe-global/safe-core-sdk.svg?style=flat)](https://github.com/safe-global/safe-core-sdk/releases)
 [![GitHub](https://img.shields.io/github/license/safe-global/safe-core-sdk)](https://github.com/safe-global/safe-core-sdk/blob/main/LICENSE.md)
 
@@ -48,6 +48,12 @@ const ethAdapter = new Web3Adapter({
   web3,
   signerAddress: safeOwner
 })
+```
+
+In case the `ethAdapter` instance is only used to execute read-only methods the `signerAddress` property can be omitted.
+
+```js
+const readOnlyEthAdapter = new Web3Adapter({ web3 })
 ```
 
 ## <a name="license">License</a>

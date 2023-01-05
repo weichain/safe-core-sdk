@@ -3,7 +3,7 @@ import {
   EthAdapter,
   MetaTransactionData,
   OperationType,
-  SafeSignature,
+  SafeMultisigTransactionResponse,
   SafeTransaction,
   SafeTransactionDataPartial,
   SafeTransactionEIP712Args,
@@ -12,16 +12,18 @@ import {
   TransactionResult
 } from '@weichain/safe-core-sdk-types'
 import ContractManager from './managers/contractManager'
+import FallbackHandlerManager from './managers/fallbackHandlerManager'
 import GuardManager from './managers/guardManager'
 import ModuleManager from './managers/moduleManager'
 import OwnerManager from './managers/ownerManager'
 import { ContractNetworksConfig } from './types'
-import { isMetaTransactionArray, sameString } from './utils'
+import { isMetaTransactionArray, isSafeMultisigTransactionResponse, sameString } from './utils'
 import {
   generateEIP712Signature,
   generatePreValidatedSignature,
   generateSignature
 } from './utils/signatures'
+import SafeSignature from './utils/signatures/SafeSignature'
 import EthSafeTransaction from './utils/transactions/SafeTransaction'
 import { SafeTransactionOptionalProps } from './utils/transactions/types'
 import {
@@ -88,6 +90,7 @@ class Safe {
   #ownerManager!: OwnerManager
   #moduleManager!: ModuleManager
   #guardManager!: GuardManager
+  #fallbackHandlerManager!: FallbackHandlerManager
 
   /**
    * Creates an instance of the Safe Core SDK.
@@ -132,6 +135,10 @@ class Safe {
     this.#ownerManager = new OwnerManager(this.#ethAdapter, this.#contractManager.safeContract)
     this.#moduleManager = new ModuleManager(this.#ethAdapter, this.#contractManager.safeContract)
     this.#guardManager = new GuardManager(this.#ethAdapter, this.#contractManager.safeContract)
+    this.#fallbackHandlerManager = new FallbackHandlerManager(
+      this.#ethAdapter,
+      this.#contractManager.safeContract
+    )
   }
 
   /**
@@ -255,6 +262,15 @@ class Safe {
   }
 
   /**
+   * Returns the address of the FallbackHandler contract.
+   *
+   * @returns The address of the FallbackHandler contract
+   */
+  getFallbackHandler(): Promise<string> {
+    return this.#fallbackHandlerManager.getFallbackHandler()
+  }
+
+  /**
    * Returns the enabled Safe guard or 0x address if no guards are enabled.
    *
    * @returns The address of the enabled Safe guard
@@ -355,6 +371,22 @@ class Safe {
   }
 
   /**
+   * Copies a Safe transaction
+   *
+   * @param safeTransaction - The Safe transaction
+   * @returns The new Safe transaction
+   */
+  async copyTransaction(safeTransaction: SafeTransaction): Promise<SafeTransaction> {
+    const signedSafeTransaction = await this.createTransaction({
+      safeTransactionData: safeTransaction.data
+    })
+    safeTransaction.signatures.forEach((signature) => {
+      signedSafeTransaction.addSignature(signature)
+    })
+    return signedSafeTransaction
+  }
+
+  /**
    * Returns the transaction hash of a Safe transaction.
    *
    * @param safeTransaction - The Safe transaction
@@ -405,11 +437,18 @@ class Safe {
    * @throws "Transactions can only be signed by Safe owners"
    */
   async signTransaction(
-    safeTransaction: SafeTransaction,
+    safeTransaction: SafeTransaction | SafeMultisigTransactionResponse,
     signingMethod: 'eth_sign' | 'eth_signTypedData' = 'eth_sign'
   ): Promise<SafeTransaction> {
+    let transaction = isSafeMultisigTransactionResponse(safeTransaction)
+      ? await this.toSafeTransactionType(safeTransaction)
+      : safeTransaction
+
     const owners = await this.getOwners()
     const signerAddress = await this.#ethAdapter.getSignerAddress()
+    if (!signerAddress) {
+      throw new Error('EthAdapter must be initialized with a signer to use this method')
+    }
     const addressIsOwner = owners.find(
       (owner: string) => signerAddress && sameString(owner, signerAddress)
     )
@@ -418,25 +457,18 @@ class Safe {
     }
     let signature: SafeSignature
     if (signingMethod === 'eth_signTypedData') {
-      signature = await this.signTypedData(safeTransaction)
+      signature = await this.signTypedData(transaction)
     } else {
-      const txHash = await this.getTransactionHash(safeTransaction)
+      const txHash = await this.getTransactionHash(transaction)
       signature = await this.signTransactionHash(txHash)
     }
     const signedSafeTransaction = await this.createTransaction({
-      safeTransactionData: safeTransaction.data
+      safeTransactionData: transaction.data
     })
-    safeTransaction.signatures.forEach((signature) => {
+    transaction.signatures.forEach((signature) => {
       signedSafeTransaction.addSignature(signature)
     })
     signedSafeTransaction.addSignature(signature)
-
-    // TO-DO: Remove in v4.0.0 {
-    console.warn(
-      `⚠️ the "signTransaction" method now returns a signed Safe transaction without modifying the passed safeTransaction argument. Please check the new documentation: https://github.com/safe-global/safe-core-sdk/tree/main/packages/safe-core-sdk#signtransaction.`
-    )
-    // }
-
     return signedSafeTransaction
   }
 
@@ -455,6 +487,9 @@ class Safe {
   ): Promise<TransactionResult> {
     const owners = await this.getOwners()
     const signerAddress = await this.#ethAdapter.getSignerAddress()
+    if (!signerAddress) {
+      throw new Error('EthAdapter must be initialized with a signer to use this method')
+    }
     const addressIsOwner = owners.find(
       (owner: string) => signerAddress && sameString(owner, signerAddress)
     )
@@ -489,6 +524,53 @@ class Safe {
   }
 
   /**
+   * Returns the Safe transaction to enable the fallback handler.
+   *
+   * @param address - The new fallback handler address
+   * @param options - The transaction optional properties
+   * @returns The Safe transaction ready to be signed
+   * @throws "Invalid fallback handler address provided"
+   * @throws "Fallback handler provided is already enabled"
+   * @throws "Current version of the Safe does not support the fallback handler functionality"
+   */
+  async createEnableFallbackHandlerTx(
+    fallbackHandlerAddress: string,
+    options?: SafeTransactionOptionalProps
+  ): Promise<SafeTransaction> {
+    const safeTransactionData: SafeTransactionDataPartial = {
+      to: this.getAddress(),
+      value: '0',
+      data: await this.#fallbackHandlerManager.encodeEnableFallbackHandlerData(
+        fallbackHandlerAddress
+      ),
+      ...options
+    }
+    const safeTransaction = await this.createTransaction({ safeTransactionData })
+    return safeTransaction
+  }
+
+  /**
+   * Returns the Safe transaction to disable the fallback handler.
+   *
+   * @param options - The transaction optional properties
+   * @returns The Safe transaction ready to be signed
+   * @throws "There is no fallback handler enabled yet"
+   * @throws "Current version of the Safe does not support the fallback handler functionality"
+   */
+  async createDisableFallbackHandlerTx(
+    options?: SafeTransactionOptionalProps
+  ): Promise<SafeTransaction> {
+    const safeTransactionData: SafeTransactionDataPartial = {
+      to: this.getAddress(),
+      value: '0',
+      data: await this.#fallbackHandlerManager.encodeDisableFallbackHandlerData(),
+      ...options
+    }
+    const safeTransaction = await this.createTransaction({ safeTransactionData })
+    return safeTransaction
+  }
+
+  /**
    * Returns the Safe transaction to enable a Safe guard.
    *
    * @param guardAddress - The desired guard address
@@ -517,8 +599,7 @@ class Safe {
    *
    * @param options - The transaction optional properties
    * @returns The Safe transaction ready to be signed
-   * @throws "Invalid guard address provided"
-   * @throws "There are no guards enabled yet"
+   * @throws "There is no guard enabled yet"
    * @throws "Current version of the Safe does not support Safe transaction guards functionality"
    */
   async createDisableGuardTx(options?: SafeTransactionOptionalProps): Promise<SafeTransaction> {
@@ -677,6 +758,76 @@ class Safe {
   }
 
   /**
+   * Converts a transaction from type SafeMultisigTransactionResponse to type SafeTransaction
+   *
+   * @param serviceTransactionResponse - The transaction to convert
+   * @returns The converted transaction with type SafeTransaction
+   */
+  async toSafeTransactionType(
+    serviceTransactionResponse: SafeMultisigTransactionResponse
+  ): Promise<SafeTransaction> {
+    const safeTransactionData: SafeTransactionDataPartial = {
+      to: serviceTransactionResponse.to,
+      value: serviceTransactionResponse.value,
+      data: serviceTransactionResponse.data || '0x',
+      operation: serviceTransactionResponse.operation,
+      safeTxGas: serviceTransactionResponse.safeTxGas,
+      baseGas: serviceTransactionResponse.baseGas,
+      gasPrice: Number(serviceTransactionResponse.gasPrice),
+      gasToken: serviceTransactionResponse.gasToken,
+      refundReceiver: serviceTransactionResponse.refundReceiver,
+      nonce: serviceTransactionResponse.nonce
+    }
+    const safeTransaction = await this.createTransaction({ safeTransactionData })
+    serviceTransactionResponse.confirmations?.map((confirmation) => {
+      const signature = new SafeSignature(confirmation.owner, confirmation.signature)
+      safeTransaction.addSignature(signature)
+    })
+    return safeTransaction
+  }
+
+  /**
+   * Checks if a Safe transaction can be executed successfully with no errors.
+   *
+   * @param safeTransaction - The Safe transaction to check
+   * @param options - The Safe transaction execution options. Optional
+   * @returns TRUE if the Safe transaction can be executed successfully with no errors
+   */
+  async isValidTransaction(
+    safeTransaction: SafeTransaction | SafeMultisigTransactionResponse,
+    options?: TransactionOptions
+  ): Promise<boolean> {
+    let transaction = isSafeMultisigTransactionResponse(safeTransaction)
+      ? await this.toSafeTransactionType(safeTransaction)
+      : safeTransaction
+
+    const signedSafeTransaction = await this.copyTransaction(transaction)
+
+    const txHash = await this.getTransactionHash(signedSafeTransaction)
+    const ownersWhoApprovedTx = await this.getOwnersWhoApprovedTx(txHash)
+    for (const owner of ownersWhoApprovedTx) {
+      signedSafeTransaction.addSignature(generatePreValidatedSignature(owner))
+    }
+    const owners = await this.getOwners()
+    const signerAddress = await this.#ethAdapter.getSignerAddress()
+    if (!signerAddress) {
+      throw new Error('EthAdapter must be initialized with a signer to use this method')
+    }
+    if (owners.includes(signerAddress)) {
+      signedSafeTransaction.addSignature(generatePreValidatedSignature(signerAddress))
+    }
+
+    const isTxValid = await this.#contractManager.safeContract.isValidTransaction(
+      signedSafeTransaction,
+      {
+        from: signerAddress,
+        ...options
+      }
+    )
+    return isTxValid
+  }
+
+  /**
    * Executes a Safe transaction.
    *
    * @param safeTransaction - The Safe transaction to execute
@@ -687,15 +838,14 @@ class Safe {
    * @throws "Cannot specify gas and gasLimit together in transaction options"
    */
   async executeTransaction(
-    safeTransaction: SafeTransaction,
+    safeTransaction: SafeTransaction | SafeMultisigTransactionResponse,
     options?: TransactionOptions
   ): Promise<TransactionResult> {
-    const signedSafeTransaction = await this.createTransaction({
-      safeTransactionData: safeTransaction.data
-    })
-    safeTransaction.signatures.forEach((signature) => {
-      signedSafeTransaction.addSignature(signature)
-    })
+    let transaction = isSafeMultisigTransactionResponse(safeTransaction)
+      ? await this.toSafeTransactionType(safeTransaction)
+      : safeTransaction
+
+    const signedSafeTransaction = await this.copyTransaction(transaction)
 
     const txHash = await this.getTransactionHash(signedSafeTransaction)
     const ownersWhoApprovedTx = await this.getOwnersWhoApprovedTx(txHash)
@@ -704,7 +854,7 @@ class Safe {
     }
     const owners = await this.getOwners()
     const signerAddress = await this.#ethAdapter.getSignerAddress()
-    if (owners.includes(signerAddress)) {
+    if (signerAddress && owners.includes(signerAddress)) {
       signedSafeTransaction.addSignature(generatePreValidatedSignature(signerAddress))
     }
 

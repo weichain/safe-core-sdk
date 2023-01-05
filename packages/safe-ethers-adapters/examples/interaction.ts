@@ -15,9 +15,9 @@ const sample = async () => {
   console.log('Setup SafeService')
   const service = new SafeService(process.env.SERVICE_URL!!)
   console.log('Setup Signer')
-  const signer = new Wallet(process.env.SIGNER_KEY!!, provider)
+  const signerOrProvider = new Wallet(process.env.SIGNER_KEY!!, provider)
   console.log('Setup SafeEthersSigner')
-  const ethAdapter = new EthersAdapter({ ethers, signer })
+  const ethAdapter = new EthersAdapter({ ethers, signerOrProvider })
   const safe = await Safe.create({ ethAdapter, safeAddress: process.env.DEPLOYER_SAFE!! })
   const safeSigner = new SafeEthersSigner(safe, service, provider)
   const contract = new Contract(

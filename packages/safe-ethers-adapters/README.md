@@ -1,6 +1,6 @@
 # Safe Ethers Adapters
 
-[![NPM Version](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-ethers-adapters.svg)](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-ethers-adapters)
+[![NPM Version](https://badge.fury.io/js/%40safe-global%2Fsafe-ethers-adapters.svg)](https://badge.fury.io/js/%40safe-global%2Fsafe-ethers-adapters)
 [![GitHub](https://img.shields.io/github/license/safe-global/safe-core-sdk)](https://github.com/safe-global/safe-core-sdk/blob/main/LICENSE.md)
 
 [Ethers](https://docs.ethers.io/v5/single-page/) adapter that facilitates the interaction with the [Safe Services](https://github.com/safe-global/safe-transaction-service)
@@ -25,13 +25,27 @@ It is also necessary to specify a service instance that should be used to publis
 const service = new SafeService("some_service_url")
 ```
 
+A Safe instance must also be created before obtaining the signer.
+It may be obtained with:
+
+```js
+import { ethers } from "ethers"
+import Safe from "@safe-global/safe-core-sdk"
+import EthersAdapter from "@safe-global/safe-ethers-lib"
+
+const safe = await Safe.create({
+  ethAdapter: new EthersAdapter({ ethers, signerOrProvider }),
+  safeAddress: "some_safe_address"
+})
+```
+
 Using these components it is possible to create an instance of the `SafeEthersSigner`
 
 ```js
-const safeSigner = await SafeEthersSigner.create("some_safe_address", signer, service)
+const safeSigner = new SafeEthersSigner(safe, service, provider)
 ```
 
-See [examples](./examples) for more information.
+See [examples](/packages/safe-ethers-adapters/examples) for more information.
 
 ## Installation
 

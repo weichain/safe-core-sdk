@@ -1,6 +1,6 @@
 # Safe Core SDK
 
-[![NPM Version](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-core-sdk.svg)](https://badge.fury.io/js/%40gnosis.pm%2Fsafe-core-sdk)
+[![NPM Version](https://badge.fury.io/js/%40safe-global%2Fsafe-core-sdk.svg)](https://badge.fury.io/js/%40safe-global%2Fsafe-core-sdk)
 [![GitHub Release](https://img.shields.io/github/release/safe-global/safe-core-sdk.svg?style=flat)](https://github.com/safe-global/safe-core-sdk/releases)
 [![GitHub](https://img.shields.io/github/license/safe-global/safe-core-sdk)](https://github.com/safe-global/safe-core-sdk/blob/main/LICENSE.md)
 
@@ -119,7 +119,7 @@ Because the signature is off-chain, there is no interaction with the contract an
 To connect `owner2` to the Safe we need to create a new instance of the class `EthAdapter` passing to its constructor the owner we would like to connect. After `owner2` account is connected to the SDK as a signer the transaction hash will be approved on-chain.
 
 ```js
-const ethAdapterOwner2 = new EthersAdapter({ ethers, signer: owner2 })
+const ethAdapterOwner2 = new EthersAdapter({ ethers, signerOrProvider: owner2 })
 const safeSdk2 = await safeSdk.connect({ ethAdapter: ethAdapterOwner2, safeAddress })
 const txHash = await safeSdk2.getTransactionHash(safeTransaction)
 const approveTxResponse = await safeSdk2.approveTransactionHash(txHash)
@@ -131,7 +131,7 @@ await approveTxResponse.transactionResponse?.wait()
 Lastly, `owner3` account is connected to the SDK as a signer and executor of the Safe transaction to execute it.
 
 ```js
-const ethAdapterOwner3 = new EthersAdapter({ ethers, signer: owner3 })
+const ethAdapterOwner3 = new EthersAdapter({ ethers, signerOrProvider: owner3 })
 const safeSdk3 = await safeSdk2.connect({ ethAdapter: ethAdapterOwner3, safeAddress })
 const executeTxResponse = await safeSdk3.executeTransaction(safeTransaction)
 await executeTxResponse.transactionResponse?.wait()
@@ -168,17 +168,23 @@ const safeFactory = await SafeFactory.create({ ethAdapter })
   ```js
   import { ContractNetworksConfig } from '@weichain/safe-core-sdk'
 
-  const id = await ethAdapter.getChainId()
+  const chainId = await ethAdapter.getChainId()
   const contractNetworks: ContractNetworksConfig = {
-    [id]: {
-      multiSendAddress: '<MULTI_SEND_ADDRESS>',
-      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
+    [chainId]: {
       safeMasterCopyAddress: '<MASTER_COPY_ADDRESS>',
       safeProxyFactoryAddress: '<PROXY_FACTORY_ADDRESS>',
+      multiSendAddress: '<MULTI_SEND_ADDRESS>',
+      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
+      fallbackHandlerAddress: '<FALLBACK_HANDLER_ADDRESS>',
+      signMessageLibAddress: '<SIGN_MESSAGE_LIB_ADDRESS>',
+      createCallAddress: '<CREATE_CALL_ADDRESS>',
+      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
+      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>', // Optional. Only needed with web3.js
       multiSendAbi: '<MULTI_SEND_ABI>', // Optional. Only needed with web3.js
       multiSendCallOnlyAbi: '<MULTI_SEND_CALL_ONLY_ABI>', // Optional. Only needed with web3.js
-      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
-      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>' // Optional. Only needed with web3.js
+      fallbackHandlerAbi: '<FALLBACK_HANDLER_ABI>', // Optional. Only needed with web3.js
+      signMessageLibAbi: '<SIGN_MESSAGE_LIB_ABI>', // Optional. Only needed with web3.js
+      createCallAbi: '<CREATE_CALL_ABI>' // Optional. Only needed with web3.js
     }
   }
 
@@ -298,17 +304,23 @@ const safeSdk = await Safe.create({ ethAdapter, safeAddress })
   ```js
   import { ContractNetworksConfig } from '@weichain/safe-core-sdk'
 
-  const id = await ethAdapter.getChainId()
+  const chainId = await ethAdapter.getChainId()
   const contractNetworks: ContractNetworksConfig = {
-    [id]: {
-      multiSendAddress: '<MULTI_SEND_ADDRESS>',
-      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
+    [chainId]: {
       safeMasterCopyAddress: '<MASTER_COPY_ADDRESS>',
       safeProxyFactoryAddress: '<PROXY_FACTORY_ADDRESS>',
+      multiSendAddress: '<MULTI_SEND_ADDRESS>',
+      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
+      fallbackHandlerAddress: '<FALLBACK_HANDLER_ADDRESS>',
+      signMessageLibAddress: '<SIGN_MESSAGE_LIB_ADDRESS>',
+      createCallAddress: '<CREATE_CALL_ADDRESS>',
+      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
+      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>', // Optional. Only needed with web3.js
       multiSendAbi: '<MULTI_SEND_ABI>', // Optional. Only needed with web3.js
       multiSendCallOnlyAbi: '<MULTI_SEND_CALL_ONLY_ABI>', // Optional. Only needed with web3.js
-      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
-      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>' // Optional. Only needed with web3.js
+      fallbackHandlerAbi: '<FALLBACK_HANDLER_ABI>', // Optional. Only needed with web3.js
+      signMessageLibAbi: '<SIGN_MESSAGE_LIB_ABI>', // Optional. Only needed with web3.js
+      createCallAbi: '<CREATE_CALL_ABI>' // Optional. Only needed with web3.js
     }
   }
 
@@ -338,16 +350,25 @@ const safeSdk2 = await safeSdk.connect({ ethAdapter, safeAddress })
   If the Safe contracts are not deployed to your current network, the `contractNetworks` property will be required to point to the addresses of the Safe contracts previously deployed by you.
 
   ```js
+  import { ContractNetworksConfig } from '@safe-global/safe-core-sdk'
+
+  const chainId = await ethAdapter.getChainId()
   const contractNetworks: ContractNetworksConfig = {
     [chainId]: {
-      multiSendAddress: '<MULTI_SEND_ADDRESS>',
-      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
       safeMasterCopyAddress: '<MASTER_COPY_ADDRESS>',
       safeProxyFactoryAddress: '<PROXY_FACTORY_ADDRESS>',
+      multiSendAddress: '<MULTI_SEND_ADDRESS>',
+      multiSendCallOnlyAddress: '<MULTI_SEND_CALL_ONLY_ADDRESS>',
+      fallbackHandlerAddress: '<FALLBACK_HANDLER_ADDRESS>',
+      signMessageLibAddress: '<SIGN_MESSAGE_LIB_ADDRESS>',
+      createCallAddress: '<CREATE_CALL_ADDRESS>',
+      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
+      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>', // Optional. Only needed with web3.js
       multiSendAbi: '<MULTI_SEND_ABI>', // Optional. Only needed with web3.js
       multiSendCallOnlyAbi: '<MULTI_SEND_CALL_ONLY_ABI>', // Optional. Only needed with web3.js
-      safeMasterCopyAbi: '<MASTER_COPY_ABI>', // Optional. Only needed with web3.js
-      safeProxyFactoryAbi: '<PROXY_FACTORY_ABI>' // Optional. Only needed with web3.js
+      fallbackHandlerAbi: '<FALLBACK_HANDLER_ABI>', // Optional. Only needed with web3.js
+      signMessageLibAbi: '<SIGN_MESSAGE_LIB_ABI>', // Optional. Only needed with web3.js
+      createCallAbi: '<CREATE_CALL_ABI>' // Optional. Only needed with web3.js
     }
   }
   const safeSdk = await Safe.connect({ ethAdapter, safeAddress, contractNetworks })
@@ -554,6 +575,15 @@ const safeTransaction = await safeSdk.createTransaction({ safeTransactionData })
 const rejectionTransaction = await safeSdk.createRejectionTransaction(safeTransaction.data.nonce)
 ```
 
+### copyTransaction
+
+Copies a Safe transaction.
+
+```js
+const safeTransaction1 = await safeSdk.createTransaction({ safeTransactionData })
+const safeTransaction2 = await copyTransaction(safeTransaction1)
+```
+
 ### getTransactionHash
 
 Returns the transaction hash of a Safe transaction.
@@ -666,6 +696,47 @@ const safeTransactionData: SafeTransactionDataPartial = {
 const safeTransaction = await safeSdk.createTransaction({ safeTransactionData })
 const txHash = await safeSdk.getTransactionHash(safeTransaction)
 const ownerAddresses = await safeSdk.getOwnersWhoApprovedTx(txHash)
+```
+
+### createEnableFallbackHandlerTx
+
+Returns the Safe transaction to enable the fallback handler.
+
+```js
+const safeTransaction = await safeSdk.createEnableFallbackHandlerTx(fallbackHandlerAddress)
+const txResponse = await safeSdk.executeTransaction(safeTransaction)
+await txResponse.transactionResponse?.wait()
+```
+
+This method can optionally receive the `options` parameter:
+
+```js
+const options: SafeTransactionOptionalProps = {
+  safeTxGas, // Optional
+  baseGas, // Optional
+  gasPrice, // Optional
+  gasToken, // Optional
+  refundReceiver, // Optional
+  nonce // Optional
+}
+const safeTransaction = await safeSdk.createEnableFallbackHandlerTx(fallbackHandlerAddress, options)
+```
+
+### createDisableFallbackHandlerTx
+
+Returns the Safe transaction to disable the fallback handler.
+
+```js
+const safeTransaction = await safeSdk.createDisableFallbackHandlerTx()
+const txResponse = await safeSdk.executeTransaction(safeTransaction)
+await txResponse.transactionResponse?.wait()
+```
+
+This method can optionally receive the `options` parameter:
+
+```js
+const options: SafeTransactionOptionalProps = { ... }
+const safeTransaction = await safeSdk.createDisableFallbackHandlerTx(options)
 ```
 
 ### createEnableGuardTx
@@ -821,6 +892,46 @@ This method can optionally receive the `options` parameter:
 ```js
 const options: SafeTransactionOptionalProps = { ... }
 const safeTransaction = await safeSdk.createChangeThresholdTx(newThreshold, options)
+```
+
+### isValidTransaction
+
+Checks if a Safe transaction can be executed successfully with no errors.
+
+```js
+const safeTransactionData: SafeTransactionDataPartial = {
+  // ...
+}
+const safeTransaction = await safeSdk.createTransaction({ safeTransactionData })
+const isValidTx = await safeSdk.isValidTransaction(safeTransaction)
+```
+
+Optionally, some properties can be passed as execution options:
+
+```js
+const options: Web3TransactionOptions = {
+  from, // Optional
+  gas, // Optional
+  gasPrice, // Optional
+  maxFeePerGas, // Optional
+  maxPriorityFeePerGas // Optional
+  nonce // Optional
+}
+```
+
+```js
+const options: EthersTransactionOptions = {
+  from, // Optional
+  gasLimit, // Optional
+  gasPrice, // Optional
+  maxFeePerGas, // Optional
+  maxPriorityFeePerGas // Optional
+  nonce // Optional
+}
+```
+
+```js
+const isValidTx = await safeSdk.isValidTransaction(safeTransaction, options)
 ```
 
 ### executeTransaction
