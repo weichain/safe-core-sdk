@@ -1,6 +1,6 @@
 {
   "name": "@weichain/safe-core-sdk-utils",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Safe Core SDK Utilities",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
@@ -51,7 +51,7 @@
     "typescript": "^4.9.3"
   },
   "dependencies": {
-    "@weichain/safe-core-sdk-types": "^1.6.4",
+    "@weichain/safe-core-sdk-types": "^1.6.5",
     "semver": "^7.3.7",
     "web3-utils": "^1.8.0"
   },

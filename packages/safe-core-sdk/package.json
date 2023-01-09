@@ -1,6 +1,6 @@
 {
   "name": "@weichain/safe-core-sdk",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "Safe Core SDK",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
@@ -88,7 +88,7 @@
   },
   "dependencies": {
     "@ethersproject/solidity": "^5.7.0",
-    "@weichain/safe-core-sdk-types": "^1.6.4",
+    "@weichain/safe-core-sdk-types": "^1.6.5",
     "@weichain/safe-deployments": "1.17.0",
     "ethereumjs-util": "^7.1.5",
     "semver": "^7.3.7",
